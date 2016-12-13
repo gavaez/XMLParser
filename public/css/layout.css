@@ -1,0 +1,43 @@
+/**
+ * Created by PhpStorm.
+ * User: Anton Ermakov
+ * Date: 07.12.2016
+ */
+body {
+	font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+	font-size: 14px;
+}
+.center {
+	margin: auto;
+	width: 60%;
+	border: 3px solid gray;
+	padding: 10px;
+}
+img {
+	display: block;
+	margin: 0 auto;
+}
+h2 {
+	text-align: center;
+}
+h3 {
+	display:inline;
+}
+ul {
+	list-style-position: outside;
+	text-indent: -15px;
+}
+ul li {
+	text-indent: -5px;
+}
+a:link, a:visited, a:active{
+	color: darkblue;
+	text-decoration: none;
+}
+a:hover {
+	color: blue;
+	text-decoration: underline;
+}
+.error {
+	color: red;
+}
