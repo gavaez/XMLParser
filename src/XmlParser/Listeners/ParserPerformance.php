@@ -7,30 +7,29 @@
 
 namespace XmlParser\Listeners;
 
-use \Swiftlet\Abstracts\Controller as ControllerAbstract;
-use \Swiftlet\Abstracts\Listener as ListenerAbstract;
-use \Swiftlet\Abstracts\View as ViewAbstract;
+use Swiftlet\Abstracts\Controller;
+use Swiftlet\Abstracts\Listener;
+use Swiftlet\Abstracts\View;
 
-/*
+/**
  * Calculate the time of XML source parsing
  */
-class ParserPerformance extends ListenerAbstract
+class ParserPerformance extends Listener
 {
-    /*
+    /**
      * Performance is calculated in seconds.
      * It is the difference of Unix timestamp Before and After action takes place (script run).
      * @var float
      */
     static private $performance;
 
-    public function actionBefore(ControllerAbstract $controller, ViewAbstract $view)
+    public function actionBefore()
     {
         self::$performance = -microtime(true);
     }
 
-	public function actionAfter(ControllerAbstract $controller, ViewAbstract $view)
+	public function actionAfter(Controller $controller, View $view)
     {
-        self::$performance += microtime(true);
-        $view->set('performance', round(self::$performance,3));
+        $view->set('performance', round(self::$performance += microtime(true), 3));
 	}
 }

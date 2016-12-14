@@ -7,97 +7,93 @@
 
 namespace XmlParser\Controllers;
 
-use \XmlParser\Models\Image as ImageModel;
-use \Swiftlet\Abstracts\Controller as ControllerAbstract;
+use Swiftlet\Abstracts\Controller;
+use Swiftlet\Interfaces\App;
+use Swiftlet\Interfaces\View;
+use XmlParser\Models\Image;
 
 /**
  * Main controller
  * Get attributes of the last image from XML source.
  */
-
-
-class Index extends ControllerAbstract
+class Index extends Controller
 {
-	protected $title = 'XML Parser';
+    const DEFAULT_TITLE = 'XML Parser';
+//    const SOURCE_URI = 'https://www.redit.com/r/';
+    const SOURCE_URI    = 'https://www.reddit.com/r/pics.xml';
 
-    /*
-     * Error message (if something wrong during XML parsing process)
-     * @var string
+
+    /**
+     * {@inheritdoc}
      */
-    public $parsError;
+    public function __construct(App $app, View $view)
+    {
+        parent::__construct($app, $view);
 
-	public function index(array $args = array())
-	{
+        $this->setTitle(self::DEFAULT_TITLE);
+    }
 
-        $image = $this->ParseXML('https://www.reddit.com/r/pics.xml'); //https://www.redit.com/r/
+    /**
+     * @param array $args [optional]
+     */
+    public function index(array $args = [])
+    {
+        $result = $this->parseXML(self::SOURCE_URI);
 
-        /*
+        /**
          * Set properties for View data representation
          * can be set through defined public magic method __set
-         * e.g. $this->view->src = $image->src;
+         * e.g. $this->view->image = $image;
          */
-        if ($image) {
-            $this->view->set('src', $image->src);
-            $this->view->set('alt', $image->alt);
-            $this->view->set('title', $image->title);
-        } else {
-            $this->view->set('parsError', $this->parsError);
-        }
-	}
+        $this->view->set($result instanceof Image ? 'image' : 'parsError', $result);
+    }
 
-	/*
-	 * Parse XML source
-	 * @param string $source
-	 * @return
-	 * On success returns instance of Image Class
-	 * On failure returns false. $this->parsError property stores Error message
-	 */
-    public function ParseXML($source='') {
-
-        if ($source) {
-            try {
-
-                $xmlContent = file_get_contents($source);
-
-                try {
-                    /*
-                     * xpath cannot search through the xml without explicitly specifying a namespace.
-                     * rename the 'xmlns' into something else to trick xpath into believing that no default namespace is defined.
-                     * source: http://php.net/manual/en/simplexmlelement.xpath.php
-                     */
-                    $xmlContent = str_replace('xmlns=', 'ns=', $xmlContent);
-
-                    //Interprets a string of XML into an object
-                    $xml = simplexml_load_string($xmlContent);
-
-                    //Get last feedback
-                    $lastFeedback = $xml->xpath("(//content)[last()]");
-
-                    //Transform data containing html code with image to XML structure
-                    $xml = simplexml_load_string(reset($lastFeedback));
-
-                    //Get last image from the XML structure
-                    $imgRec = $xml->xpath("(//img)[last()]");
-
-                    if ($imgRec) {
-                        //store image attributes in Image Model instance
-                        $image = new ImageModel();
-                        $image->src = strval($imgRec[0]['src']);
-                        $image->alt = strval($imgRec[0]['alt']);
-                        $image->title = strval($imgRec[0]['title']);
-                    } else {
-                        $this->parsError = 'Parser cannot find any image from the last feedback.';
-                    }
-                } catch (\Exception $e) {
-                    $this->parsError = 'Parser cannot process the file.';
-                }
-            } catch (\Exception $e) {
-                $this->parsError = "Fail to open {$source}.";
-            }
-        } else {
-            $this->parsError = 'XML source must be defined!';
+    /**
+     * Parse XML source
+     *
+     * @param string $source
+     *
+     * @return string|Image
+     *     On success returns instance of Image Class
+     *     On failure returns error message (if something wrong during XML parsing process)
+     */
+    private function parseXML($source)
+    {
+        if (!$source) {
+            return 'XML source must be defined!';
         }
 
-        return (!$this->parsError)?$image:false;
+        $xml = @file_get_contents($source);
+        if (!$xml) {
+            return "Fail to open $source.";
+        }
+
+        /**
+         * xpath cannot search through the xml without explicitly specifying a namespace.
+         * rename the 'xmlns' into something else to trick xpath into believing that no default namespace is defined.
+         * source: http://php.net/manual/en/simplexmlelement.xpath.php
+         */
+        $xml = str_replace('xmlns=', 'ns=', $xml);
+
+        //Interprets a string of XML into an object
+        if ($xml = simplexml_load_string($xml)) {
+            //Get last feedback
+            $lastFeedback = $xml->xpath('(//content)[last()]');
+            //Transform data containing html code with image to XML structure
+            $xml = $lastFeedback ? simplexml_load_string(reset($lastFeedback)) : false;
+        }
+
+        if (!$xml) {
+            return 'Parser cannot process the file.';
+        }
+
+        //Get last image from the XML structure
+        $imgRec = $xml->xpath('(//img)[last()]');
+        if (!$imgRec) {
+            return 'Parser cannot find any image from the last feedback.';
+        }
+
+        //store image attributes in Image Model instance
+        return new Image(reset($imgRec));
     }
 }
